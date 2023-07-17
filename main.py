@@ -25,8 +25,8 @@ bq_project = os.environ['BQ_PROJECT']
 bq_dataset = os.environ['BQ_DATASET']
 
 
-# generate access token
 def get_access_token():
+    # generate access token    
     generate_token = requests.post('https://rest.eu.zuora.com/oauth/token',
                                    data={"grant_type": "client_credentials", "scope": "WebLinkAPI"},
                                    auth=(client_id, client_secret))
@@ -34,6 +34,7 @@ def get_access_token():
 
 
 def headers_request(access_token):
+    # generate headers 
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -42,20 +43,20 @@ def headers_request(access_token):
 
 
 def start_time_calculation(start_ts):
-	# Calculate the start time by subtracting 10 minutes from the given timestamp
+    # Calculate the start time by subtracting 10 minutes from the given timestamp
     start_time = datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
     start_time = start_time - timedelta(minutes=10)
     return start_time
 
 
 def end_time_calculation(end_ts):
-	# Parse the end timestamp into a datetime object
+    # Parse the end timestamp into a datetime object
     end_time = datetime.strptime(end_ts, "%Y-%m-%d %H:%M:%S")
     return end_time
 
 
 def bq_query(query):
-	# Execute a BigQuery query and return the results
+    # Execute a BigQuery query and return the results
     client = bigquery.Client()
     query_job = client.query(query)
     results = query_job.result()
@@ -63,7 +64,7 @@ def bq_query(query):
 
 
 def truncate_table(table):
-	# Truncate the specified BigQuery table
+    # Truncate the specified BigQuery table
     query = f"""
     TRUNCATE TABLE `{bq_project}.{bq_dataset}.{table}`
     """
@@ -72,7 +73,7 @@ def truncate_table(table):
 
 
 def initiate_create_stg_table_if_nesessary(table_name, table_schema):
-	# Create a staging table if it doesn't exist in BigQuery
+    # Create a staging table if it doesn't exist in BigQuery
     table = f'stg_{table_name}'.lower()
     query = f"""
     CREATE TABLE IF NOT EXISTS `{bq_project}.{bq_dataset}.{table}`
@@ -83,7 +84,7 @@ def initiate_create_stg_table_if_nesessary(table_name, table_schema):
 
 
 def upload_data_to_stg_table(table_name, df):
-	# Upload data from a DataFrame to a staging table in BigQuery
+    # Upload data from a DataFrame to a staging table in BigQuery
     table = f'stg_{table_name}'.lower()
     truncate_table(table)
     client = bigquery.Client()
@@ -94,7 +95,7 @@ def upload_data_to_stg_table(table_name, df):
 
 
 def create_request(table, start_time, end_time):
-	# Create a job request to extract data from Zuora API for a specific table
+    # Create a job request to extract data from Zuora API for a specific table
     job_url = base_url
     json_data = {
         "query": f"SELECT deleted, * FROM {table} WHERE UpdatedDate > timestamp '{start_time}' AND UpdatedDate <= timestamp '{end_time}'",
@@ -112,7 +113,7 @@ def create_request(table, start_time, end_time):
 
 
 def waiting_completed_status(job_id):
-	# Wait for the job to reach a completed, aborted, or cancelled status
+    # Wait for the job to reach a completed, aborted, or cancelled status
     status_url = f'{base_url}/{job_id}'
     status = 'pending'
     while status not in ['completed', 'aborted', 'cancelled']:
@@ -124,7 +125,7 @@ def waiting_completed_status(job_id):
 
 
 def get_file_url(response_data, status):
-	# Get the URL of the extracted data file
+    # Get the URL of the extracted data file
     if status == 'completed':
         data_file_url = response_data['data']['dataFile']
     else:
@@ -134,7 +135,7 @@ def get_file_url(response_data, status):
 
 
 def create_table_schema(column_names, table):
-	# Create the BigQuery table schema based on column names from the data file
+    # Create the BigQuery table schema based on column names from the data file
     bq_columns = []
     df_new_columns = []
     table = table.lower()
@@ -154,7 +155,7 @@ def create_table_schema(column_names, table):
 
 
 def extract_and_process_files(data_file_url, table_name):
-	# Extract data from the file, create a staging table, and upload the data to it
+    # Extract data from the file, create a staging table, and upload the data to it
     response = requests.get(data_file_url)
     data = response.content
     column_names = data.splitlines()[0].decode('utf-8').split(',')
@@ -166,21 +167,20 @@ def extract_and_process_files(data_file_url, table_name):
     return logging.info('Files have been processed')
 
 
-# main
-
+# Main
 access_token = get_access_token()
 headers = headers_request(access_token)
 
 
 @functions_framework.http
-def main(bq_request):
-    request_json = bq_request.get_json()
+def main(request):
+    request_json = request.get_json()
     
-    # extract and handle the start time argument
+    # Extract and handle the start-time argument
     start_ts = request_json['calls'][0][0]
     start_time = start_time_calculation(start_ts)
     
-    # extract and handle the end time argument
+    # Extract and handle the end-time argument
     end_ts = request_json['calls'][0][1]
     end_time = end_time_calculation(end_ts)
     
