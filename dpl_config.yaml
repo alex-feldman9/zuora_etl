@@ -1,0 +1,11 @@
+base_url: https://rest.eu.zuora.com/query/jobs/
+
+extracted_tables:
+   - account
+   - payment
+   - PaymentPart
+   - refund
+   - invoice
+   - invoiceitem
+ 
+
