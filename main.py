@@ -4,6 +4,7 @@ import io
 import requests
 import yaml
 import logging
+import google.cloud.logging
 import time
 import pandas as pd
 import re
@@ -11,7 +12,6 @@ from datetime import datetime, timedelta
 import json
 from google.cloud import bigquery
 
-# logging.basicConfig(level=logging.DEBUG)
 
 # Load the config file
 with open('dpl_config.yaml') as file:
@@ -23,6 +23,10 @@ client_id = os.environ['CLIENT_ID']
 client_secret = os.environ['CLIENT_SECRET']
 bq_project = os.environ['BQ_PROJECT']
 bq_dataset = os.environ['BQ_DATASET']
+
+# logging.basicConfig(level=logging.DEBUG)
+client = google.cloud.logging.Client(project=bq_project)
+client.setup_logging()
 
 
 def get_access_token():
